@@ -283,6 +283,6 @@ def create_gm_acc_spam_command(packer, controller, CS, slcSet, bus, Vego, frogpi
   if (cruiseBtn != CruiseButtons.INIT) and controller.frame % (FRAMES_ON + FRAMES_OFF) < FRAMES_ON:
     controller.last_button_frame = controller.frame
     idx = (CS.buttons_counter + 1) % 4
-    return [create_buttons_five(packer, bus, idx, cruiseBtn, byfive)]*35
+    return [create_buttons_five(packer, bus, idx, cruiseBtn, byfive)]*40
   else:
     return []
