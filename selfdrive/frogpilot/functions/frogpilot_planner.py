@@ -101,7 +101,8 @@ class FrogPilotPlanner:
     # Update the max allowed speed
     self.v_cruise = self.update_v_cruise(carState, controlsState, enabled, modelData, v_cruise, v_ego)
 
-    self.params_memory.put_int("CSLCSpeed", int(round(self.v_cruise * CV.MS_TO_MPH)))
+    # self.params_memory.put_int("CSLCSpeed", int(round(self.v_cruise * CV.MS_TO_MPH)))
+    self.params_memory.put_float("CSLCSpeed", round(self.v_cruise, 4)) #using ms
 
   def update_v_cruise(self, carState, controlsState, enabled, modelData, v_cruise, v_ego):
     # Offsets to adjust the max speed to match the cluster

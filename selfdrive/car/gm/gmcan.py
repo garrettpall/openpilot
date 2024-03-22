@@ -286,3 +286,45 @@ def create_gm_acc_spam_command(packer, controller, CS, slcSet, bus, Vego, frogpi
     return [create_buttons_five(packer, bus, idx, cruiseBtn, byfive)]*30
   else:
     return []
+
+# using ms
+def create_gm_acc_spam_command_ms(packer, controller, CS, slcSet_ms, bus, Vego, frogpilot_variables, accel):
+  is_metric = controller.is_metric
+  MS_CONVERT = CV.MS_TO_KPH if is_metric else CV.MS_TO_MPH
+  slcSet = slcSet_ms * MS_CONVERT
+
+  cruiseBtn = CruiseButtons.INIT
+  byfive = 0
+  speedSetPoint = int(round(CS.out.cruiseState.speed * MS_CONVERT))
+
+  FRAMES_ON = 3
+  FRAMES_OFF = 21 - FRAMES_ON
+
+  if not frogpilot_variables.experimentalMode:
+    if slcSet + 5 < Vego * MS_CONVERT:
+      slcSet = slcSet - 10
+  else:
+    slcSet = int(round((Vego * 1.01 + 4.6 * accel + 0.7 * accel ** 3 - 1 / 35 * accel ** 5) * MS_CONVERT)) # 1.01 factor to match cluster speed better
+  
+  if slcSet <= int(math.floor((speedSetPoint - 1)/5.0)*5.0) and speedSetPoint > (28 if is_metric else 20):
+    cruiseBtn = CruiseButtons.DECEL_SET
+    byfive = 1
+  elif slcSet >= int(math.ceil((speedSetPoint + 1)/5.0)*5.0):
+    cruiseBtn = CruiseButtons.RES_ACCEL
+    byfive = 1
+  elif slcSet < speedSetPoint and speedSetPoint > (24 if is_metric else 16):
+    cruiseBtn = CruiseButtons.DECEL_SET
+    byfive = 0
+  elif slcSet > speedSetPoint:
+    cruiseBtn = CruiseButtons.RES_ACCEL
+    byfive = 0
+  else:
+    cruiseBtn = CruiseButtons.INIT
+    byfive = 0
+
+  if (cruiseBtn != CruiseButtons.INIT) and controller.frame % (FRAMES_ON + FRAMES_OFF) < FRAMES_ON:
+    controller.last_button_frame = controller.frame
+    idx = (CS.buttons_counter + 1) % 4
+    return [create_buttons_five(packer, bus, idx, cruiseBtn, byfive)]*30
+  else:
+    return []

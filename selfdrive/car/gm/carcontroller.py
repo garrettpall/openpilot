@@ -43,6 +43,8 @@ class CarController:
     self.cancel_counter = 0
     self.pedal_steady = 0.
 
+    self.is_metric = Params().get_bool("IsMetric")
+
     self.lka_steering_cmd_counter = 0
     self.lka_icon_status_last = (False, False)
 
@@ -247,8 +249,11 @@ class CarController:
       if (self.CP.carFingerprint in SDGM_CAR or self.CP.carFingerprint in CAMERA_ACC_CAR) and frogpilot_variables.CSLC:
         if CC.enabled and self.frame % 3 == 0 and CS.cruise_buttons == CruiseButtons.UNPRESS and not CS.out.gasPressed:
           bus = CanBus.CAMERA if self.CP.carFingerprint in SDGM_CAR else CanBus.POWERTRAIN
-          slcSet = get_set_speed(self, hud_v_cruise)
-          can_sends.extend(gmcan.create_gm_acc_spam_command(self.packer_pt, self, CS, slcSet, bus, CS.out.vEgo, frogpilot_variables, accel))
+          # slcSet = get_set_speed(self, hud_v_cruise)
+          # can_sends.extend(gmcan.create_gm_acc_spam_command(self.packer_pt, self, CS, slcSet, bus, CS.out.vEgo, frogpilot_variables, accel))
+          # using ms
+          slcSet_ms = get_set_speed(self, hud_v_cruise)
+          can_sends.extend(gmcan.create_gm_acc_spam_command_ms(self.packer_pt, self, CS, slcSet_ms, bus, CS.out.vEgo, frogpilot_variables, accel))
 
     if self.CP.networkLocation == NetworkLocation.fwdCamera:
       # Silence "Take Steering" alert sent by camera, forward PSCMStatus with HandsOffSWlDetectionStatus=1
@@ -267,12 +272,22 @@ class CarController:
     return new_actuators, can_sends
 
 def get_set_speed(self, hud_v_cruise):
-  v_cruise_kph = min(hud_v_cruise * CV.MS_TO_KPH, V_CRUISE_MAX)
-  v_cruise = int(round(v_cruise_kph * CV.KPH_TO_MPH))
+  # v_cruise_kph = min(hud_v_cruise * CV.MS_TO_KPH, V_CRUISE_MAX)
+  # v_cruise = int(round(v_cruise_kph * CV.KPH_TO_MPH))
 
-  v_cruise_slc: int = 0
-  v_cruise_slc = params_memory.get_int("CSLCSpeed")
+  # v_cruise_slc: int = 0
+  # v_cruise_slc = params_memory.get_int("CSLCSpeed")
 
-  if v_cruise_slc > 0:
-    v_cruise = v_cruise_slc
-  return v_cruise
+  # if v_cruise_slc > 0:
+  #   v_cruise = v_cruise_slc
+  # return v_cruise
+
+  # using ms
+  v_cruise_ms = min(hud_v_cruise, V_CRUISE_MAX * CV.KPH_TO_MS)
+
+  v_cruise_slc_ms: float = 0.
+  v_cruise_slc_ms = params_memory.get_float("CSLCSpeed")
+
+  if v_cruise_slc_ms > 0.:
+    v_cruise_ms = v_cruise_slc_ms
+  return v_cruise_ms
