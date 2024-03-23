@@ -253,24 +253,28 @@ def create_gm_cc_spam_command(packer, controller, CS, actuators):
 def create_gm_acc_spam_command(packer, controller, CS, slcSet, bus, Vego, frogpilot_variables, accel):
   cruiseBtn = CruiseButtons.INIT
   byfive = 0
-  speedSetPoint = int(round(CS.out.cruiseState.speed * CV.MS_TO_MPH))
+
+  MS_CONVERT = CV.MS_TO_KPH if frogpilot_variables.is_metric else CV.MS_TO_MPH
+
+  speedSetPoint = int(round(CS.out.cruiseState.speed * MS_CONVERT))
+  slcSet = int(round(slcSet * MS_CONVERT))
 
   FRAMES_ON = 6
   FRAMES_OFF = 30 - FRAMES_ON
 
   if not frogpilot_variables.experimentalMode:
-    if slcSet + 5 < Vego * CV.MS_TO_MPH:
-      slcSet = slcSet - 10
+    if slcSet + 5 < Vego * MS_CONVERT:
+      slcSet = slcSet - 10 # 10 lower to increase deceleration until with 5
   else:
-    slcSet = int(round((Vego * 1.01 + 4.6 * accel + 0.7 * accel ** 3 - 1 / 35 * accel ** 5) * CV.MS_TO_MPH)) # 1.01 factor to match cluster speed better
+    slcSet = int(round((Vego * 1.01 + 4.6 * accel + 0.7 * accel ** 3 - 1 / 35 * accel ** 5) * MS_CONVERT)) # 1.01 factor to match cluster speed better
   
-  if slcSet <= int(math.floor((speedSetPoint - 1)/5.0)*5.0) and speedSetPoint > 20:
+  if slcSet <= int(math.floor((speedSetPoint - 1)/5.0)*5.0) and speedSetPoint > (25 if frogpilot_variables.is_metric else 20):
     cruiseBtn = CruiseButtons.DECEL_SET
     byfive = 1
   elif slcSet >= int(math.ceil((speedSetPoint + 1)/5.0)*5.0):
     cruiseBtn = CruiseButtons.RES_ACCEL
     byfive = 1
-  elif slcSet < speedSetPoint and speedSetPoint > 16:
+  elif slcSet < speedSetPoint and speedSetPoint > (25 if frogpilot_variables.is_metric else 16):
     cruiseBtn = CruiseButtons.DECEL_SET
     byfive = 0
   elif slcSet > speedSetPoint:

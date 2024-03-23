@@ -1250,6 +1250,8 @@ class Controls:
     self.speed_limit_confirmation_lower = self.speed_limit_confirmation and self.params.get_bool("SLCConfirmationLower")
     self.speed_limit_confirmation_higher = self.speed_limit_confirmation and self.params.get_bool("SLCConfirmationHigher")
 
+    self.frogpilot_variables.is_metric = self.is_metric
+
 def main():
   controls = Controls()
   controls.controlsd_thread()

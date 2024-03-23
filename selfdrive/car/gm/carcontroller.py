@@ -267,12 +267,11 @@ class CarController:
     return new_actuators, can_sends
 
 def get_set_speed(self, hud_v_cruise):
-  v_cruise_kph = min(hud_v_cruise * CV.MS_TO_KPH, V_CRUISE_MAX)
-  v_cruise = int(round(v_cruise_kph * CV.KPH_TO_MPH))
+  v_cruise = min(hud_v_cruise, V_CRUISE_MAX * CV.KPH_TO_MS)
 
-  v_cruise_slc: int = 0
-  v_cruise_slc = params_memory.get_int("CSLCSpeed")
+  v_cruise_slc: float = 0.
+  v_cruise_slc = params_memory.get_float("CSLCSpeed")
 
-  if v_cruise_slc > 0:
+  if v_cruise_slc > 0.:
     v_cruise = v_cruise_slc
   return v_cruise
