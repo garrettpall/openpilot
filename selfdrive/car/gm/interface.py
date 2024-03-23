@@ -14,7 +14,7 @@ from openpilot.selfdrive.controls.lib.drive_helpers import get_friction
 
 from openpilot.common.params import Params
 
-params_memory = Params("/dev/shm/params")
+params = Params()
 
 ButtonType = car.CarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
@@ -154,7 +154,7 @@ class CarInterface(CarInterfaceBase):
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_SDGM
 
       # Used for CEM with CSLC
-      ret.openpilotLongitudinalControl = True 
+      ret.openpilotLongitudinalControl = params.get_bool("CSLCEnabled")
       ret.longitudinalTuning.deadzoneBP = [0.]
       ret.longitudinalTuning.deadzoneV = [0.9]  # == 2 mph allowable delta
       ret.stoppingDecelRate = 7.45  # == 16.67 mph/s (OFF + ON = 30 frames)
