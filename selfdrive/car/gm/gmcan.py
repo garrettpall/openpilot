@@ -274,10 +274,10 @@ def create_gm_acc_spam_command(packer, controller, CS, slcSet, bus, Vego, frogpi
   elif slcSet >= int(math.ceil((speedSetPoint + 1)/5.0)*5.0):
     cruiseBtn = CruiseButtons.RES_ACCEL
     byfive = 1
-  elif slcSet < speedSetPoint and speedSetPoint > (25 if frogpilot_variables.is_metric else 16):
+  elif slcSet <= (speedSetPoint - 1) and speedSetPoint > (25 if frogpilot_variables.is_metric else 16):
     cruiseBtn = CruiseButtons.DECEL_SET
     byfive = 0
-  elif slcSet > speedSetPoint:
+  elif slcSet >= (speedSetPoint + 1):
     cruiseBtn = CruiseButtons.RES_ACCEL
     byfive = 0
   else:
