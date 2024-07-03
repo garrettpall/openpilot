@@ -99,6 +99,8 @@ class FrogPilotPlanner:
     if run_cem and (controlsState.enabled or frogpilotCarControl.alwaysOnLateral) and driving_gear:
       self.cem.update(carState, frogpilotNavigation, modelData, v_ego, v_lead, frogpilot_toggles)
 
+    self.params_memory.put_float("CSLCSpeed", self.v_cruise)
+
     check_lane_width = frogpilot_toggles.adjacent_lanes or frogpilot_toggles.blind_spot_path or frogpilot_toggles.lane_detection
     if check_lane_width and v_ego >= frogpilot_toggles.minimum_lane_change_speed:
       self.lane_width_left = calculate_lane_width(modelData.laneLines[0], modelData.laneLines[1], modelData.roadEdges[0])
@@ -247,7 +249,10 @@ class FrogPilotPlanner:
     v_cruise_diff = v_cruise_cluster - v_cruise
 
     v_ego_cluster = max(carState.vEgoCluster, v_ego)
-    v_ego_diff = v_ego_cluster - v_ego
+    if frogpilot_toggles.CSLC:
+      v_ego_diff = 0
+    else:
+      v_ego_diff = v_ego_cluster - v_ego
 
     # Pfeiferj's Map Turn Speed Controller
     if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and controlsState.enabled:

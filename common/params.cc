@@ -264,6 +264,8 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"Compass", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VISUALS},
     {"ConditionalExperimental", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_CONTROLS},
     {"CrosstrekTorque", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VEHICLES},
+    {"CSLCEnabled", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_CONTROLS},
+    {"CSLCSpeed", PERSISTENT},
     {"CurrentHolidayTheme", PERSISTENT},
     {"CurrentModel", PERSISTENT | CLEAR_ON_OFFROAD_TRANSITION},
     {"CurrentModelName", PERSISTENT | CLEAR_ON_OFFROAD_TRANSITION},
