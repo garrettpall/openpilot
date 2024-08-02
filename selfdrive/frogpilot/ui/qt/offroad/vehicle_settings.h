@@ -19,7 +19,7 @@ private:
 
   std::set<QString> gmKeys = {
     "ExperimentalGMTune", "LongPitch", "NewLongAPIGM",
-    "VoltSNG"
+    "VoltSNG", "CSLCEnabled"
   };
 
   std::set<QString> hyundaiKeys = {
