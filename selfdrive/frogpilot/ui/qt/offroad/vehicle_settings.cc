@@ -137,6 +137,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"VoltSNG", tr("2017 Volt Stop and Go Hack"), tr("Forces stop and go for the 2017 Chevy Volt."), ""},
     {"ExperimentalGMTune", tr("Experimental GM Tune"), tr("Enables FrogsGoMoo's experimental GM tune that is based on nothing but guesswork. Use at your own risk!"), ""},
     {"LongPitch", tr("Uphill/Downhill Smoothing"), tr("Smoothens the gas and brake response when driving on slopes."), ""},
+    {"CSLCEnabled", tr("GM CSLC"), tr("Set cars cruise speed based on SLC, MTSC, VTSC, & CEM.\n\nTurns OpenPilot Longitudnal Control off for camera ACC cars."), ""},
     {"NewLongAPIGM", tr("Use comma's New Longitudinal API"), tr("Enables comma's new control system that has shown great improvement with acceleration and braking, but has a few issues on some GM vehicles."), ""},
 
     {"NewLongAPI", tr("Use comma's New Longitudinal API"), tr("Enables comma's new control system that has shown great improvement with acceleration and braking, but has a few issues on Hyundai/Kia/Genesis."), ""},
@@ -182,7 +183,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     updateFrogPilotToggles();
   });
 
-  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "NewLongAPI", "NewLongAPIGM"};
+  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "NewLongAPI", "NewLongAPIGM", "CSLCEnabled"};
   for (const QString &key : rebootKeys) {
     QObject::connect(static_cast<ToggleControl*>(toggles[key]), &ToggleControl::toggleFlipped, [this]() {
       if (started) {

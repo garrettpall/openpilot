@@ -77,6 +77,7 @@ const uint16_t GM_PARAM_NO_CAMERA = 16;
 const uint16_t GM_PARAM_NO_ACC = 32;
 const uint16_t GM_PARAM_PEDAL_LONG = 64;  // TODO: this can be inferred
 const uint16_t GM_PARAM_PEDAL_INTERCEPTOR = 128;
+const uint16_t GM_PARAM_CSLC = 256;
 
 enum {
   GM_BTN_UNPRESS = 1,
@@ -97,6 +98,7 @@ bool gm_pedal_long = false;
 bool gm_cc_long = false;
 bool gm_skip_relay_check = false;
 bool gm_force_ascm = false;
+bool gm_cslc = false;
 
 static void gm_rx_hook(const CANPacket_t *to_push) {
   if (GET_BUS(to_push) == 0U) {
@@ -245,8 +247,8 @@ static bool gm_tx_hook(const CANPacket_t *to_send) {
     int button = (GET_BYTE(to_send, 5) >> 4) & 0x7U;
 
     bool allowed_btn = (button == GM_BTN_CANCEL) && cruise_engaged_prev;
-    // For standard CC, allow spamming of SET / RESUME
-    if (gm_cc_long) {
+    // For standard CC and CSLC, allow spamming of SET / RESUME
+    if (gm_cc_long || (((gm_hw == GM_SDGM) || (gm_hw == GM_CAM)) && gm_cslc)) {
       allowed_btn |= cruise_engaged_prev && (button == GM_BTN_SET || button == GM_BTN_RESUME || button == GM_BTN_UNPRESS);
     }
 
@@ -313,6 +315,7 @@ static safety_config gm_init(uint16_t param) {
   gm_skip_relay_check = GET_FLAG(param, GM_PARAM_NO_CAMERA);
   gm_has_acc = !GET_FLAG(param, GM_PARAM_NO_ACC);
   enable_gas_interceptor = GET_FLAG(param, GM_PARAM_PEDAL_INTERCEPTOR);
+  gm_cslc = GET_FLAG(param, GM_PARAM_CSLC);
 
   safety_config ret = BUILD_SAFETY_CFG(gm_rx_checks, GM_ASCM_TX_MSGS);
   if (gm_hw == GM_CAM) {

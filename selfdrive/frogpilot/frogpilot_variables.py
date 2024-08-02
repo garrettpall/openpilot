@@ -376,8 +376,9 @@ class FrogPilotVariables:
         has_radar = not CP.radarUnavailable
         is_pid_car = CP.lateralTuning.which == "pid"
         max_acceleration_enabled = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
+        cslc = self.params.get_bool("CSLCEnabled")
         openpilot_longitudinal = CP.openpilotLongitudinalControl
-        pcm_cruise = CP.pcmCruise
+        pcm_cruise = CP.pcmCruise and not toggle.CSLC
     else:
       always_on_lateral_set = False
       car_make = "mock"
@@ -388,10 +389,12 @@ class FrogPilotVariables:
       is_pid_car = False
       max_acceleration_enabled = False
       openpilot_longitudinal = False
+      cslc = False
       pcm_cruise = False
 
     toggle = self.frogpilot_toggles
 
+    toggle.CSLC = cslc
     toggle.is_metric = params.get_bool("IsMetric")
     distance_conversion = 1 if toggle.is_metric else CV.FOOT_TO_METER
     small_distance_conversion = 1 if toggle.is_metric else CV.INCH_TO_CM

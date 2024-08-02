@@ -53,7 +53,10 @@ class FrogPilotVCruise:
       self.override_force_stop_timer -= DT_MDL
 
     v_ego_cluster = max(carState.vEgoCluster, v_ego)
-    v_ego_diff = v_ego_cluster - v_ego
+    if frogpilot_toggles.CSLC:
+      v_ego_diff = 0
+    else:
+      v_ego_diff = v_ego_cluster - v_ego
 
     # Pfeiferj's Map Turn Speed Controller
     if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and controlsState.enabled:

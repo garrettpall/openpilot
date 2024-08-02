@@ -53,7 +53,7 @@ class VCruiseHelper:
     self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
-      if not self.CP.pcmCruise:
+      if not self.CP.pcmCruise or frogpilot_toggles.CSLC:
         # if stock cruise is completely disabled, then we can use our own set speed logic
         self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles)
         self.v_cruise_cluster_kph = self.v_cruise_kph
@@ -140,10 +140,25 @@ class VCruiseHelper:
 
   def initialize_v_cruise(self, CS, experimental_mode: bool, desired_speed_limit, frogpilot_toggles) -> None:
     # initializing is handled by the PCM
-    if self.CP.pcmCruise:
+    if self.CP.pcmCruise and not frogpilot_toggles.CSLC:
       return
 
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if experimental_mode and not frogpilot_toggles.conditional_experimental_mode else V_CRUISE_INITIAL
+
+    # CSLC resume/set logic
+    if frogpilot_toggles.CSLC:
+      if frogpilot_toggles.prev_button == ButtonType.resumeCruise and self.v_cruise_kph_last < 250:
+        self.v_cruise_kph = self.v_cruise_kph_last
+      else:
+        # Initial set speed
+        if desired_speed_limit != 0 and frogpilot_toggles.set_speed_limit:
+          # If there's a known speed limit and the corresponding FP toggle is set, push it to the car
+          self.v_cruise_kph = int(round(desired_speed_limit * CV.MS_TO_KPH))
+        else:
+          # Use fixed initial set speed from mode etc.
+          self.v_cruise_kph = int(round(clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+      self.v_cruise_cluster_kph = self.v_cruise_kph
+      return
 
     # 250kph or above probably means we never had a set speed
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last < 250:
