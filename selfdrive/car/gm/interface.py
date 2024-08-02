@@ -95,6 +95,7 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs, params):
+    cslcEnabled = params.get_bool("CSLCEnabled")
     use_new_api = params.get_bool("NewLongAPIGM")
 
     ret.carName = "gm"
@@ -146,10 +147,19 @@ class CarInterface(CarInterfaceBase):
       ret.vEgoStopping = 0.25
       ret.vEgoStarting = 0.25
 
-      if experimental_long:
+      if experimental_long and not cslcEnabled:
         ret.pcmCruise = False
         ret.openpilotLongitudinalControl = True
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_CAM_LONG
+
+      if cslcEnabled:
+        # Used for CEM with CSLC
+        ret.openpilotLongitudinalControl = True
+        ret.stoppingDecelRate = 3.25  # == 8.33 mph/s (OFF + ON = 12 frames)
+        ret.longitudinalActuatorDelay = 1.
+
+        ret.longitudinalTuning.kiBP = [0.]
+        ret.longitudinalTuning.kiV = [0.]
 
     elif candidate in SDGM_CAR:
       if use_new_api:
@@ -161,6 +171,14 @@ class CarInterface(CarInterfaceBase):
       ret.minEnableSpeed = -1.  # engage speed is decided by ASCM
       ret.minSteerSpeed = 30 * CV.MPH_TO_MS
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_SDGM
+
+      # Used for CEM with CSLC
+      ret.openpilotLongitudinalControl = cslcEnabled
+      ret.stoppingDecelRate = 7.45  # == 16.67 mph/s (OFF + ON = 30 frames)
+      ret.longitudinalActuatorDelay = 1.
+
+      ret.longitudinalTuning.kiBP = [0.]
+      ret.longitudinalTuning.kiV = [0.]
 
     else:  # ASCM, OBD-II harness
       ret.openpilotLongitudinalControl = not disable_openpilot_long
@@ -352,6 +370,9 @@ class CarInterface(CarInterfaceBase):
 
     if ACCELERATOR_POS_MSG not in fingerprint[CanBus.POWERTRAIN]:
       ret.flags |= GMFlags.NO_ACCELERATOR_POS_MSG.value
+
+    if cslcEnabled:
+      ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_CSLC
 
     return ret
 
