@@ -19,7 +19,7 @@ private:
   ToggleControl *disableOpenpilotLong;
 
   std::set<QString> gmKeys = {
-    "ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG"
+    "ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG", "CSLCEnabled"
   };
 
   std::set<QString> hyundaiKeys = {

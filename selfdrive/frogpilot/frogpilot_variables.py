@@ -58,13 +58,15 @@ class FrogPilotVariables:
         car_make = CP.carName
         car_model = CP.carFingerprint
         max_acceleration_allowed = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
+        toggle.CSLC = self.params.get_bool("CSLCEnabled")
         toggle.openpilot_longitudinal = CP.openpilotLongitudinalControl
-        pcm_cruise = CP.pcmCruise
+        pcm_cruise = CP.pcmCruise and not toggle.CSLC
     else:
       always_on_lateral_set = False
       car_make = "mock"
       car_model = "mock"
       max_acceleration_allowed = False
+      toggle.CSLC = False
       toggle.openpilot_longitudinal = False
       pcm_cruise = False
 

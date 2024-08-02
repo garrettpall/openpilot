@@ -248,9 +248,9 @@ bool hasLongitudinalControl(const cereal::CarParams::Reader &car_params) {
   // Using the experimental longitudinal toggle, returns whether longitudinal control
   // will be active without needing a restart of openpilot
   Params params = Params();
-  return (car_params.getExperimentalLongitudinalAvailable()
-             ? params.getBool("ExperimentalLongitudinalEnabled")
-             : car_params.getOpenpilotLongitudinalControl()) && !params.getBool("DisableOpenpilotLongitudinal");
+  return ((car_params.getExperimentalLongitudinalAvailable() ? params.getBool("ExperimentalLongitudinalEnabled") : car_params.getOpenpilotLongitudinalControl())
+          || params.getBool("CSLCEnabled"))
+          && !params.getBool("DisableOpenpilotLongitudinal");
 }
 
 // ParamWatcher
