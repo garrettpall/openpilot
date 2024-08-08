@@ -18,6 +18,7 @@ typedef enum {
 static GmHardware gm_hw = GM_ASCM;
 static bool gm_cam_long = false;
 static bool gm_pcm_cruise = false;
+static bool gm_sdgm = false;
 
 static void gm_rx_hook(const CANPacket_t *to_push) {
 
@@ -63,11 +64,11 @@ static void gm_rx_hook(const CANPacket_t *to_push) {
 
     // Reference for brake pressed signals:
     // https://github.com/commaai/openpilot/blob/master/selfdrive/car/gm/carstate.py
-    if ((addr == 0xBE) && (gm_hw == GM_ASCM)) {
+    if ((addr == 0xBE) && ((gm_hw == GM_ASCM) || gm_sdgm)) {
       brake_pressed = GET_BYTE(to_push, 1) >= 8U;
     }
 
-    if ((addr == 0xC9) && (gm_hw == GM_CAM)) {
+    if ((addr == 0xC9) && ((gm_hw == GM_CAM) && !gm_sdgm)) {
       brake_pressed = GET_BIT(to_push, 40U);
     }
 
@@ -187,6 +188,7 @@ static int gm_fwd_hook(int bus_num, int addr) {
 
 static safety_config gm_init(uint16_t param) {
   const uint16_t GM_PARAM_HW_CAM = 1;
+  const uint16_t GM_PARAM_HW_SDGM = 4;
 
   static const LongitudinalLimits GM_ASCM_LONG_LIMITS = {
     .max_gas = 3072,
@@ -208,7 +210,7 @@ static safety_config gm_init(uint16_t param) {
   };
 
   static const CanMsg GM_CAM_LONG_TX_MSGS[] = {{0x180, 0, 4}, {0x315, 0, 5}, {0x2CB, 0, 8}, {0x370, 0, 6},  // pt bus
-                                               {0x184, 2, 8}};  // camera bus
+                                               {0x315, 2, 5}, {0x184, 2, 8}};  // camera bus
 
 
   // TODO: do checksum and counter checks. Add correct timestep, 0.1s for now.
@@ -227,6 +229,7 @@ static safety_config gm_init(uint16_t param) {
                                           {0x1E1, 2, 7}, {0x184, 2, 8}};  // camera bus
 
   gm_hw = GET_FLAG(param, GM_PARAM_HW_CAM) ? GM_CAM : GM_ASCM;
+  gm_sdgm = GET_FLAG(param, GM_PARAM_HW_SDGM);
 
   if (gm_hw == GM_ASCM) {
     gm_long_limits = &GM_ASCM_LONG_LIMITS;
