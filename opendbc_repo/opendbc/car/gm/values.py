@@ -63,6 +63,7 @@ class CarControllerParams:
 class GMSafetyFlags(IntFlag):
   HW_CAM = 1
   HW_CAM_LONG = 2
+  HW_SDGM = 4
 
 
 @dataclass
