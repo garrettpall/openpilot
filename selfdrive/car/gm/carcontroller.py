@@ -3,7 +3,7 @@ from opendbc.can.packer import CANPacker
 from openpilot.selfdrive.car import DT_CTRL, apply_driver_steer_torque_limits
 from openpilot.selfdrive.car.conversions import Conversions as CV
 from openpilot.selfdrive.car.gm import gmcan
-from openpilot.selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons
+from openpilot.selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, SDGM_CAR
 from openpilot.selfdrive.car.helpers import interp
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
@@ -107,6 +107,8 @@ class CarController(CarControllerBase):
         if self.CP.networkLocation == NetworkLocation.fwdCamera:
           at_full_stop = at_full_stop and stopping
           friction_brake_bus = CanBus.POWERTRAIN
+          if self.CP.carFingerprint in SDGM_CAR:
+            friction_brake_bus = CanBus.CAMERA
 
         # GasRegenCmdActive needs to be 1 to avoid cruise faults. It describes the ACC state, not actuation
         can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled, at_full_stop))
@@ -120,7 +122,7 @@ class CarController(CarControllerBase):
 
       # Radar needs to know current speed and yaw rate (50hz),
       # and that ADAS is alive (10hz)
-      if not self.CP.radarUnavailable:
+      if not self.CP.radarUnavailable and self.CP.carFingerprint not in SDGM_CAR:
         tt = self.frame * DT_CTRL
         time_and_headlights_step = 10
         if self.frame % time_and_headlights_step == 0:
