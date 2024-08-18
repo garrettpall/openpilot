@@ -145,7 +145,7 @@ class CarState(CarStateBase):
       ret.rightBlindspot = pt_cp.vl["BCMBlindSpotMonitor"]["RightBSM"] == 1
 
     # FrogPilot CarState functions
-    fp_ret.hasMenu = not (self.CP.flags & GMFlags.NO_CAMERA.value or self.CP.carFingerprint in CC_ONLY_CAR)
+    fp_ret.hasMenu = not (self.CP.flags & GMFlags.NO_CAMERA.value or self.CP.carFingerprint in (CC_ONLY_CAR | SDGM_CAR))
 
     self.lkas_previously_enabled = self.lkas_enabled
     self.lkas_enabled = pt_cp.vl["ASCMSteeringButton"]["LKAButton"]
