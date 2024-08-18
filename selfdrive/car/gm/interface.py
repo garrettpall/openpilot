@@ -130,8 +130,8 @@ class CarInterface(CarInterfaceBase):
       ret.longitudinalTuning.kpBP = [5., 35.]
       ret.longitudinalTuning.kiBP = [0.]
 
-    if candidate in CAMERA_ACC_CAR:
-      ret.experimentalLongitudinalAvailable = candidate not in CC_ONLY_CAR
+    if candidate in (CAMERA_ACC_CAR | SDGM_CAR):
+      ret.experimentalLongitudinalAvailable = candidate not in (CC_ONLY_CAR | SDGM_CAR)
       ret.networkLocation = NetworkLocation.fwdCamera
       ret.radarUnavailable = True  # no radar
       ret.pcmCruise = True
@@ -165,25 +165,6 @@ class CarInterface(CarInterfaceBase):
 
         ret.longitudinalTuning.kiBP = [0.]
         ret.longitudinalTuning.kiV = [0.]
-
-    elif candidate in SDGM_CAR:
-      if use_new_api:
-        ret.longitudinalTuning.kiV = [0., 0.]  # TODO: tuning
-      ret.experimentalLongitudinalAvailable = False
-      ret.networkLocation = NetworkLocation.fwdCamera
-      ret.pcmCruise = True
-      ret.radarUnavailable = True
-      ret.minEnableSpeed = -1.  # engage speed is decided by ASCM
-      ret.minSteerSpeed = 30 * CV.MPH_TO_MS
-      ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_SDGM
-
-      # Used for CEM with CSLC
-      ret.openpilotLongitudinalControl = cslcEnabled
-      ret.stoppingDecelRate = 7.45  # == 16.67 mph/s (OFF + ON = 30 frames)
-      ret.longitudinalActuatorDelay = 1.
-
-      ret.longitudinalTuning.kiBP = [0.]
-      ret.longitudinalTuning.kiV = [0.]
 
     else:  # ASCM, OBD-II harness
       ret.openpilotLongitudinalControl = not disable_openpilot_long
@@ -280,6 +261,8 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.CADILLAC_XT4:
       ret.steerActuatorDelay = 0.2
+      ret.minEnableSpeed = -1.  # engage speed is decided by pcm
+      ret.minSteerSpeed = 30 * CV.MPH_TO_MS
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     elif candidate == CAR.CADILLAC_XT5_CC:
@@ -288,12 +271,12 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.CHEVROLET_TRAVERSE:
       ret.steerActuatorDelay = 0.2
-      ret.minSteerSpeed = 10 * CV.KPH_TO_MS
+      ret.minEnableSpeed = -1.  # engage speed is decided by pcm
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     elif candidate == CAR.BUICK_BABYENCLAVE:
       ret.steerActuatorDelay = 0.2
-      ret.minSteerSpeed = 10 * CV.KPH_TO_MS
+      ret.minEnableSpeed = -1.  # engage speed is decided by pcm
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     elif candidate == CAR.CADILLAC_CT6_CC:
@@ -408,7 +391,7 @@ class CarInterface(CarInterfaceBase):
     # TODO: verify 17 Volt can enable for the first time at a stop and allow for all GMs
     below_min_enable_speed = ret.vEgo < self.CP.minEnableSpeed or self.CS.moving_backward
     if below_min_enable_speed and not (ret.standstill and ret.brake >= 20 and
-                                       (self.CP.networkLocation == NetworkLocation.fwdCamera and not self.CP.carFingerprint in SDGM_CAR)):
+                                       self.CP.networkLocation == NetworkLocation.fwdCamera):
       events.add(EventName.belowEngageSpeed)
     if ret.cruiseState.standstill and not (self.CP.autoResumeSng or self.disable_resumeRequired):
       events.add(EventName.resumeRequired)
