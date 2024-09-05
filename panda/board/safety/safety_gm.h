@@ -78,6 +78,7 @@ const uint16_t GM_PARAM_NO_ACC = 32;
 const uint16_t GM_PARAM_PEDAL_LONG = 64;  // TODO: this can be inferred
 const uint16_t GM_PARAM_PEDAL_INTERCEPTOR = 128;
 const uint16_t GM_PARAM_CSLC = 256;
+const uint16_t GM_PARAM_FORCE_BRAKE_C9 = 512;
 
 enum {
   GM_BTN_UNPRESS = 1,
@@ -99,6 +100,7 @@ bool gm_cc_long = false;
 bool gm_skip_relay_check = false;
 bool gm_force_ascm = false;
 bool gm_cslc = false;
+bool gm_force_brake_c9 = false;
 
 static void gm_rx_hook(const CANPacket_t *to_push) {
   if (GET_BUS(to_push) == 0U) {
@@ -139,11 +141,11 @@ static void gm_rx_hook(const CANPacket_t *to_push) {
 
     // Reference for brake pressed signals:
     // https://github.com/commaai/openpilot/blob/master/selfdrive/car/gm/carstate.py
-    if ((addr == 0xBE) && (gm_hw == GM_ASCM)) {
+    if ((addr == 0xBE) && ((gm_hw == GM_ASCM) || gm_force_brake_c9)) {
       brake_pressed = GET_BYTE(to_push, 1) >= 8U;
     }
 
-    if ((addr == 0xC9) && (gm_hw == GM_CAM)) {
+    if ((addr == 0xC9) && ((gm_hw == GM_CAM) && !gm_force_brake_c9)) {
       brake_pressed = GET_BIT(to_push, 40U) != 0U;
     }
 
@@ -316,6 +318,7 @@ static safety_config gm_init(uint16_t param) {
   gm_has_acc = !GET_FLAG(param, GM_PARAM_NO_ACC);
   enable_gas_interceptor = GET_FLAG(param, GM_PARAM_PEDAL_INTERCEPTOR);
   gm_cslc = GET_FLAG(param, GM_PARAM_CSLC);
+  gm_force_brake_c9 = GET_FLAG(param, GM_PARAM_FORCE_BRAKE_C9);
 
   safety_config ret = BUILD_SAFETY_CFG(gm_rx_checks, GM_ASCM_TX_MSGS);
   if (gm_hw == GM_CAM) {

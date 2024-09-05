@@ -151,6 +151,9 @@ class CarInterface(CarInterfaceBase):
         ret.pcmCruise = False
         ret.openpilotLongitudinalControl = True
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_CAM_LONG
+        if candidate in SDGM_CAR:
+          ret.safetyConfigs[0].safetyParam |= Panda.FLAG_FORCE_BRAKE_C9
+          ret.flags |= GMFlags.FORCE_BRAKE_C9.value
 
       if cslcEnabled:
         # Used for CEM with CSLC
