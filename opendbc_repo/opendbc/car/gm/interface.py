@@ -103,10 +103,11 @@ class CarInterface(CarInterfaceBase):
       ret.minSteerSpeed = 10 * CV.KPH_TO_MS
 
       # Tuning for experimental long
-      ret.longitudinalTuning.kiV = [2.0, 1.5]
-      ret.stoppingDecelRate = 2.0  # reach brake quickly after enabling
+      ret.longitudinalTuning.kiV = [0.5, 0.5]
+      ret.stoppingDecelRate = 1.0
       ret.vEgoStopping = 0.25
       ret.vEgoStarting = 0.25
+      ret.stopAccel = -0.25
 
       if experimental_long:
         ret.pcmCruise = False
@@ -128,7 +129,7 @@ class CarInterface(CarInterfaceBase):
       ret.minSteerSpeed = 7 * CV.MPH_TO_MS
 
       # Tuning
-      ret.longitudinalTuning.kiV = [2.4, 1.5]
+      ret.longitudinalTuning.kiV = [0.5, 0.5]
 
     # These cars have been put into dashcam only due to both a lack of users and test coverage.
     # These cars likely still work fine. Once a user confirms each car works and a test route is
