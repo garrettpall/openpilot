@@ -1,14 +1,17 @@
+import math
 from opendbc.can.packer import CANPacker
 from opendbc.car import Bus, DT_CTRL, apply_driver_steer_torque_limits, structs
 from opendbc.car.gm import gmcan
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons
-from opendbc.car.common.numpy_fast import interp
+from opendbc.car.common.numpy_fast import interp, clip
 from opendbc.car.interfaces import CarControllerBase
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
 NetworkLocation = structs.CarParams.NetworkLocation
 LongCtrlState = structs.CarControl.Actuators.LongControlState
+
+ACCELERATION_DUE_TO_GRAVITY = 9.81  # m/s^2
 
 # Camera cancels up to 0.1s after brake is pressed, ECM allows 0.5s
 CAMERA_CANCEL_DELAY_FRAMES = 10
@@ -31,6 +34,12 @@ class CarController(CarControllerBase):
     self.lka_icon_status_last = (False, False)
 
     self.params = CarControllerParams(self.CP)
+
+    self.mass = CP.mass
+    self.tireRadius = 0.075 * CP.wheelbase + 0.1453
+    self.frontalArea = 1.05 * CP.wheelbase + 0.0679
+    self.coeffDrag = 0.30
+    self.airDensity = 1.225
 
     self.packer_pt = CANPacker(DBC[self.CP.carFingerprint][Bus.pt])
     self.packer_obj = CANPacker(DBC[self.CP.carFingerprint][Bus.radar])
@@ -89,8 +98,23 @@ class CarController(CarControllerBase):
           self.apply_gas = self.params.INACTIVE_REGEN
           self.apply_brake = 0
         else:
-          self.apply_gas = int(round(interp(actuators.accel, self.params.GAS_LOOKUP_BP, self.params.GAS_LOOKUP_V)))
-          self.apply_brake = int(round(interp(actuators.accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
+          if len(CC.orientationNED) == 3 and CS.out.vEgo > self.CP.vEgoStopping:
+            accel_due_to_pitch = math.sin(CC.orientationNED[1]) * ACCELERATION_DUE_TO_GRAVITY
+          else:
+            accel_due_to_pitch = 0.0
+          
+          accel = clip(actuators.accel + accel_due_to_pitch, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+
+          torque = self.tireRadius * ((self.mass*accel) + (0.5*self.coeffDrag*self.frontalArea*self.airDensity*CS.out.vEgo**2))
+          scaled_torque = torque + self.params.ZERO_GAS
+          apply_gas_torque = clip(scaled_torque, self.params.MAX_ACC_REGEN, self.params.MAX_GAS)
+          brake_accel = min((scaled_torque - self.params.BRAKE_SWITCH)/(self.tireRadius*self.mass), 0)
+
+          self.apply_gas = int(round(apply_gas_torque))
+          self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
+          if self.apply_brake > 0:
+            self.apply_gas = self.params.INACTIVE_REGEN
+
           # Don't allow any gas above inactive regen while stopping
           # FIXME: brakes aren't applied immediately when enabling at a stop
           if stopping:
