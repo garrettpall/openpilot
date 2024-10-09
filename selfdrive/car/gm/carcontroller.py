@@ -149,7 +149,7 @@ class CarController(CarControllerBase):
             # Using extend instead of append since the message is only sent intermittently
             can_sends.extend(gmcan.create_gm_cc_spam_command(self.packer_pt, self, CS, actuators))
 
-        if actuators.accel < -1.5:
+        if actuators.accel < -0.5:
           self.friction_brake_active = 1
           interceptor_gas_cmd = 0
         else:
