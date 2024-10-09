@@ -113,8 +113,10 @@ class CarInterface(CarInterfaceBase):
         ret.openpilotLongitudinalControl = True
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_CAM_LONG
 
-      if candidate in SDGM_CAR and not ret.openpilotLongitudinalControl:
-        ret.minEnableSpeed = -1.  # engage speed is decided by pcm
+      if candidate in SDGM_CAR:
+          ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_SDGM
+          if not ret.openpilotLongitudinalControl:
+            ret.minEnableSpeed = -1.  # engage speed is decided by pcm
 
     else:  # ASCM, OBD-II harness
       ret.openpilotLongitudinalControl = True
