@@ -3,7 +3,7 @@ from opendbc.car import DT_CTRL, apply_driver_steer_torque_limits, structs
 from opendbc.car.gm import gmcan
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons
-from opendbc.car.common.numpy_fast import interp
+from opendbc.car.common.numpy_fast import interp, clip
 from opendbc.car.interfaces import CarControllerBase
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
@@ -15,6 +15,7 @@ CAMERA_CANCEL_DELAY_FRAMES = 10
 # Enforce a minimum interval between steering messages to avoid a fault
 MIN_STEER_MSG_INTERVAL_MS = 15
 
+ACCELERATION_DUE_TO_GRAVITY = 9.81  # m/s^2
 
 class CarController(CarControllerBase):
   def __init__(self, dbc_name, CP):
@@ -89,8 +90,25 @@ class CarController(CarControllerBase):
           self.apply_gas = self.params.INACTIVE_REGEN
           self.apply_brake = 0
         else:
-          self.apply_gas = int(round(interp(actuators.accel, self.params.GAS_LOOKUP_BP, self.params.GAS_LOOKUP_V)))
-          self.apply_brake = int(round(interp(actuators.accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
+          tireRadius = 0.075 * CS.CP.wheelbase + 0.1453
+          mass = CS.CP.mass
+          frontalArea = 1.05 * CS.CP.wheelbase + 0.0679
+          CoeffDrag = .30
+          CoeffRolling = 0.008
+          airDensity = 1.225
+
+          accel = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+
+          torque = tireRadius * ((mass*accel) + (.5*CoeffDrag*frontalArea*airDensity*CS.out.vEgo**2) + (CoeffRolling*mass*ACCELERATION_DUE_TO_GRAVITY))
+          scaled_torque = torque + self.params.ZERO_GAS
+          apply_gas_torque = clip(scaled_torque, self.params.MAX_ACC_REGEN, self.params.MAX_GAS)
+          brake_accel = min((scaled_torque - self.params.BRAKE_SWITCH)/(tireRadius*mass), 0)
+
+          self.apply_gas = int(round(apply_gas_torque))
+          self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
+          if self.apply_brake > 0:
+            self.apply_gas = self.params.INACTIVE_REGEN
+
           # Don't allow any gas above inactive regen while stopping
           # FIXME: brakes aren't applied immediately when enabling at a stop
           if stopping:
