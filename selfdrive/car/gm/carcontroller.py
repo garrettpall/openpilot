@@ -138,8 +138,9 @@ class CarController(CarControllerBase):
           CoeffDrag = .30
           CoeffRolling = 0.008
           airDensity = 1.225
-
-          torque = tireRadius * ((mass*actuators.accel) + (.5*CoeffDrag*frontalArea*airDensity*CS.out.vEgo**2) + (CoeffRolling*mass*ACCELERATION_DUE_TO_GRAVITY)) # no pitch yet
+          accel = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+          torque = tireRadius * ((mass*accel) + (.5*CoeffDrag*frontalArea*airDensity*CS.out.vEgo**2) + (CoeffRolling*mass*ACCELERATION_DUE_TO_GRAVITY))
+          
           if len(CC.orientationNED) > 1:
             self.pitch.update(CC.orientationNED[1])
             self.accel_g = ACCELERATION_DUE_TO_GRAVITY * apply_deadzone(self.pitch.x, PITCH_DEADZONE) # driving uphill is positive pitch
@@ -149,19 +150,14 @@ class CarController(CarControllerBase):
             gas_max = self.params.MAX_GAS_PLUS
           else:
             gas_max = self.params.MAX_GAS
-          apply_gas_torque = max(min(gas_max, torque + 2054 + 4096), self.params.MAX_ACC_REGEN)
           
-
+          scaled_torque = torque + self.params.ZERO_GAS
+          apply_gas_torque = clip(scaled_torque, self.params.MAX_ACC_REGEN, gas_max)
+          brake_accel = min((scaled_torque - self.params.BRAKE_SWITCH)/(tireRadius*mass), 0)
           self.apply_gas = int(round(apply_gas_torque))
-
-          if self.CP.carFingerprint in EV_CAR:
-            self.params.update_ev_gas_brake_threshold(CS.out.vEgo)
-            self.apply_brake = int(round(interp(brake_accel, self.params.EV_BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
-          else:
-            self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
-
+          self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
           if self.apply_brake > 0:
-            self.apply_gas = self.params.MAX_ACC_REGEN
+            self.apply_gas = self.params.INACTIVE_REGEN
 
           # Don't allow any gas above inactive regen while stopping
           # FIXME: brakes aren't applied immediately when enabling at a stop
