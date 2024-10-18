@@ -121,14 +121,6 @@ class CarController(CarControllerBase):
       if self.frame % 4 == 0:
         stopping = actuators.longControlState == LongCtrlState.stopping
 
-        # Pitch compensated acceleration;
-        # TODO: include future pitch (sm['modelDataV2'].orientation.y) to account for long actuator delay
-        if frogpilot_toggles.long_pitch and len(CC.orientationNED) > 1:
-          self.pitch.update(CC.orientationNED[1])
-          self.accel_g = ACCELERATION_DUE_TO_GRAVITY * apply_deadzone(self.pitch.x, PITCH_DEADZONE) # driving uphill is positive pitch
-          accel += self.accel_g
-          brake_accel = actuators.accel + self.accel_g * interp(CS.out.vEgo, BRAKE_PITCH_FACTOR_BP, BRAKE_PITCH_FACTOR_V)
-
         at_full_stop = CC.longActive and CS.out.standstill
         near_stop = CC.longActive and (CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE)
         interceptor_gas_cmd = 0
@@ -140,20 +132,37 @@ class CarController(CarControllerBase):
           self.apply_gas = self.params.INACTIVE_REGEN
           self.apply_brake = int(min(-100 * self.CP.stopAccel, self.params.MAX_BRAKE))
         else:
-          # Normal operation
+          tireRadius = 0.075 * CS.CP.wheelbase + 0.1453
+          mass = CS.CP.mass
+          frontalArea = 1.05 * CS.CP.wheelbase + 0.0679
+          CoeffDrag = .30
+          CoeffRolling = 0.008
+          airDensity = 1.225
+
+          torque = tireRadius * ((mass*actuators.accel) + (.5*CoeffDrag*frontalArea*airDensity*CS.out.vEgo**2) + (CoeffRolling*mass*ACCELERATION_DUE_TO_GRAVITY)) # no pitch yet
+          if len(CC.orientationNED) > 1:
+            self.pitch.update(CC.orientationNED[1])
+            self.accel_g = ACCELERATION_DUE_TO_GRAVITY * apply_deadzone(self.pitch.x, PITCH_DEADZONE) # driving uphill is positive pitch
+            torque = torque + tireRadius * mass * self.accel_g
+
+          if frogpilot_toggles.sport_plus:
+            gas_max = self.params.MAX_GAS_PLUS
+          else:
+            gas_max = self.params.MAX_GAS
+          apply_gas_torque = max(min(gas_max, torque + 2054 + 4096), self.params.MAX_ACC_REGEN)
+          
+
+          self.apply_gas = int(round(apply_gas_torque))
+
           if self.CP.carFingerprint in EV_CAR:
             self.params.update_ev_gas_brake_threshold(CS.out.vEgo)
-            if frogpilot_toggles.sport_plus:
-              self.apply_gas = int(round(interp(accel, self.params.EV_GAS_LOOKUP_BP_PLUS, self.params.GAS_LOOKUP_V_PLUS)))
-            else:
-              self.apply_gas = int(round(interp(accel, self.params.EV_GAS_LOOKUP_BP, self.params.GAS_LOOKUP_V)))
             self.apply_brake = int(round(interp(brake_accel, self.params.EV_BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
           else:
-            if frogpilot_toggles.sport_plus:
-              self.apply_gas = int(round(interp(accel, self.params.GAS_LOOKUP_BP_PLUS, self.params.GAS_LOOKUP_V_PLUS)))
-            else:
-              self.apply_gas = int(round(interp(accel, self.params.GAS_LOOKUP_BP, self.params.GAS_LOOKUP_V)))
             self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
+
+          if self.apply_brake > 0:
+            self.apply_gas = self.params.MAX_ACC_REGEN
+
           # Don't allow any gas above inactive regen while stopping
           # FIXME: brakes aren't applied immediately when enabling at a stop
           if stopping:
