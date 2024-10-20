@@ -116,7 +116,7 @@ class SelfdriveD:
     self.rk = Ratekeeper(100, print_delay_threshold=None)
 
     # Determine startup event
-    self.startup_event = EventName.startup if build_metadata.openpilot.comma_remote and build_metadata.tested_channel else EventName.startupMaster
+    self.startup_event = EventName.startup
     if not car_recognized:
       self.startup_event = EventName.startupNoCar
     elif car_recognized and self.CP.passive:
