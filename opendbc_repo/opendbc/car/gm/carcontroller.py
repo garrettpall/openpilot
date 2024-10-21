@@ -1,3 +1,4 @@
+import math
 from opendbc.can.packer import CANPacker
 from opendbc.car import DT_CTRL, apply_driver_steer_torque_limits, structs
 from opendbc.car.gm import gmcan
@@ -9,6 +10,8 @@ from opendbc.car.interfaces import CarControllerBase
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
 NetworkLocation = structs.CarParams.NetworkLocation
 LongCtrlState = structs.CarControl.Actuators.LongControlState
+
+ACCELERATION_DUE_TO_GRAVITY = 9.81  # m/s^2
 
 # Camera cancels up to 0.1s after brake is pressed, ECM allows 0.5s
 CAMERA_CANCEL_DELAY_FRAMES = 10
@@ -95,7 +98,12 @@ class CarController(CarControllerBase):
           self.apply_gas = self.params.INACTIVE_REGEN
           self.apply_brake = 0
         else:
-          accel = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+          if len(CC.orientationNED) == 3 and CS.out.vEgo > self.CP.vEgoStopping:
+            accel_due_to_pitch = math.sin(CC.orientationNED[1]) * ACCELERATION_DUE_TO_GRAVITY
+          else:
+            accel_due_to_pitch = 0.0
+          
+          accel = clip(actuators.accel + accel_due_to_pitch, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
 
           torque = self.tireRadius * ((self.mass*accel) + (0.5*self.coeffDrag*self.frontalArea*self.airDensity*CS.out.vEgo**2))
           scaled_torque = torque + self.params.ZERO_GAS
