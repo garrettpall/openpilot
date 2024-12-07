@@ -286,6 +286,8 @@ struct CarState {
       setCruise @9;
       resumeCruise @10;
       gapAdjustCruise @11;
+      accelHardCruise @12;
+      decelHardCruise @13;
     }
   }
 
