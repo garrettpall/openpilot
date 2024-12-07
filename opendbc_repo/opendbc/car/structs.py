@@ -162,6 +162,8 @@ class CarState:
       setCruise = auto()
       resumeCruise = auto()
       gapAdjustCruise = auto()
+      accelHardCruise = auto()
+      decelHardCruise = auto()
 
 
 @auto_dataclass
