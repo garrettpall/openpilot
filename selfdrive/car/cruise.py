@@ -21,10 +21,14 @@ CRUISE_LONG_PRESS = 50
 CRUISE_NEAREST_FUNC = {
   ButtonType.accelCruise: math.ceil,
   ButtonType.decelCruise: math.floor,
+  ButtonType.accelHardCruise: math.ceil,
+  ButtonType.decelHardCruise: math.floor,
 }
 CRUISE_INTERVAL_SIGN = {
   ButtonType.accelCruise: +1,
   ButtonType.decelCruise: -1,
+  ButtonType.accelHardCruise: +5,
+  ButtonType.decelHardCruise: -5,
 }
 
 
@@ -34,7 +38,7 @@ class VCruiseHelper:
     self.v_cruise_kph = V_CRUISE_UNSET
     self.v_cruise_cluster_kph = V_CRUISE_UNSET
     self.v_cruise_kph_last = 0
-    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
+    self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0, ButtonType.decelHardCruise: 0, ButtonType.accelHardCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
 
   @property
@@ -89,21 +93,27 @@ class VCruiseHelper:
 
     # Don't adjust speed when pressing resume to exit standstill
     cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
-    if button_type == ButtonType.accelCruise and cruise_standstill:
+    if button_type in (ButtonType.accelCruise, ButtonType.accelHardCruise) and cruise_standstill:
       return
 
     # Don't adjust speed if we've enabled since the button was depressed (some ports enable on rising edge)
     if not self.button_change_states[button_type]["enabled"]:
       return
+    
+    v_cruise_delta_interval = CRUISE_INTERVAL_SIGN[button_type]
+    
+    if long_press and button_type in (ButtonType.accelCruise, ButtonType.decelCruise):
+      v_cruise_delta_interval = v_cruise_delta_interval * 5
 
-    v_cruise_delta = v_cruise_delta * (5 if long_press else 1)
-    if long_press and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
-      self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+    v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
+
+    if v_cruise_delta_interval % 5 == 0 and self.v_cruise_kph % abs(v_cruise_delta) != 0:  # partial interval
+      self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / abs(v_cruise_delta)) * abs(v_cruise_delta)
     else:
-      self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+      self.v_cruise_kph += v_cruise_delta
 
     # If set is pressed while overriding, clip cruise speed to minimum of vEgo
-    if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise):
+    if CS.gasPressed and button_type in (ButtonType.decelCruise, ButtonType.setCruise, ButtonType.decelHardCruise):
       self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
 
     self.v_cruise_kph = np.clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)

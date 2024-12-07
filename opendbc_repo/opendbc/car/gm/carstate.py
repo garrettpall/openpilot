@@ -15,6 +15,7 @@ STANDSTILL_THRESHOLD = 10 * 0.0311 * CV.KPH_TO_MS
 
 BUTTONS_DICT = {CruiseButtons.RES_ACCEL: ButtonType.accelCruise, CruiseButtons.DECEL_SET: ButtonType.decelCruise,
                 CruiseButtons.MAIN: ButtonType.mainCruise, CruiseButtons.CANCEL: ButtonType.cancel}
+HARD_BUTTONS_DICT = {CruiseButtons.RES_ACCEL: ButtonType.accelHardCruise, CruiseButtons.DECEL_SET: ButtonType.decelHardCruise}
 
 
 class CarState(CarStateBase):
@@ -32,6 +33,9 @@ class CarState(CarStateBase):
     self.buttons_counter = 0
 
     self.distance_button = 0
+    self.hard_cruise_buttons = 0
+    self.force_reset_cruise_buttons = False
+    self.normal_cruise_buttons = (CruiseButtons.RES_ACCEL, CruiseButtons.DECEL_SET)
 
   def update(self, can_parsers) -> structs.CarState:
     pt_cp = can_parsers[Bus.pt]
@@ -41,11 +45,23 @@ class CarState(CarStateBase):
     ret = structs.CarState()
 
     prev_cruise_buttons = self.cruise_buttons
+    prev_hard_cruise_buttons = self.hard_cruise_buttons
     prev_distance_button = self.distance_button
     self.cruise_buttons = pt_cp.vl["ASCMSteeringButton"]["ACCButtons"]
+    self.hard_cruise_buttons = pt_cp.vl["ASCMSteeringButton"]["ACCButtonsHard"]
     self.distance_button = pt_cp.vl["ASCMSteeringButton"]["DistanceButton"]
     self.buttons_counter = pt_cp.vl["ASCMSteeringButton"]["RollingCounter"]
     self.pscm_status = copy.copy(pt_cp.vl["PSCMStatus"])
+
+    # When button is pressed hard, normal press still stays active. This resets the normal press to unpress 
+    # until another button is pressed or cruise button is released.
+    if self.hard_cruise_buttons != CruiseButtons.INIT and self.cruise_buttons in self.normal_cruise_buttons:
+      self.force_reset_cruise_buttons = True
+
+    if self.force_reset_cruise_buttons == True and self.cruise_buttons in self.normal_cruise_buttons:
+      self.cruise_buttons = CruiseButtons.UNPRESS
+    elif self.force_reset_cruise_buttons == True and self.cruise_buttons not in self.normal_cruise_buttons:
+      self.force_reset_cruise_buttons = False
 
     # Variables used for avoiding LKAS faults
     self.loopback_lka_steering_cmd_updated = len(loopback_cp.vl_all["ASCMLKASteeringCmd"]["RollingCounter"]) > 0
@@ -146,7 +162,9 @@ class CarState(CarStateBase):
         *create_button_events(self.cruise_buttons, prev_cruise_buttons, BUTTONS_DICT,
                               unpressed_btn=CruiseButtons.UNPRESS),
         *create_button_events(self.distance_button, prev_distance_button,
-                              {1: ButtonType.gapAdjustCruise})
+                              {1: ButtonType.gapAdjustCruise}),
+        *create_button_events(self.hard_cruise_buttons, prev_hard_cruise_buttons, HARD_BUTTONS_DICT,
+                              unpressed_btn=CruiseButtons.INIT)
       ]
 
     return ret
