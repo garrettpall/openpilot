@@ -157,7 +157,8 @@ class CarController(CarControllerBase):
           
           scaled_torque = torque + self.params.ZERO_GAS
           apply_gas_torque = clip(scaled_torque, self.params.MAX_ACC_REGEN, gas_max)
-          brake_accel = min((scaled_torque - self.params.BRAKE_SWITCH)/(self.tireRadius*self.mass), 0)
+          BRAKE_SWITCH = int(round(interp(CS.out.vEgo, self.params.BRAKE_SWITCH_LOOKUP_BP, self.params.BRAKE_SWITCH_LOOKUP_V)))
+          brake_accel = min((scaled_torque - BRAKE_SWITCH)/(self.tireRadius*self.mass), 0)
           self.apply_gas = int(round(apply_gas_torque))
           self.apply_brake = int(round(interp(brake_accel, self.params.BRAKE_LOOKUP_BP, self.params.BRAKE_LOOKUP_V)))
           if self.apply_brake > 0:
