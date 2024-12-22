@@ -376,7 +376,7 @@ class FrogPilotVariables:
         has_radar = not CP.radarUnavailable
         is_pid_car = CP.lateralTuning.which == "pid"
         max_acceleration_enabled = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
-        cslc = self.params.get_bool("CSLCEnabled")
+        cslc = params.get_bool("CSLCEnabled")
         openpilot_longitudinal = CP.openpilotLongitudinalControl
         pcm_cruise = CP.pcmCruise and not toggle.CSLC
     else:
