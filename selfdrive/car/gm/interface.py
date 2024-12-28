@@ -291,6 +291,7 @@ class CarInterface(CarInterfaceBase):
 
     elif candidate == CAR.CHEVROLET_VOLT_2019:
       ret.steerActuatorDelay = 0.2
+      ret.minSteerSpeed = 7 * CV.MPH_TO_MS
       if not ret.openpilotLongitudinalControl:
         ret.minEnableSpeed = -1.  # engage speed is decided by pcm
       CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
