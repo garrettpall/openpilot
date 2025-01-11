@@ -247,7 +247,6 @@ FW_QUERY_CONFIG = FwQueryConfig(
       [StdQueries.SHORT_TESTER_PRESENT_RESPONSE, GM_FW_RESPONSE + bytes([req[-1]])],
       rx_offset=GM_RX_OFFSET,
       bus=0,
-      logging=True,
     ),
   ]],
   extra_ecus=[(Ecu.fwdCamera, 0x24b, None)],
