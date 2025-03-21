@@ -230,8 +230,9 @@ static safety_config gm_init(uint16_t param) {
                                           {0x1E1, 2, 7, false}, {0x184, 2, 8, false}};  // camera bus
 
   gm_hw = GET_FLAG(param, GM_PARAM_HW_CAM) ? GM_CAM : GM_ASCM;
+  const bool gm_ascm_int = GET_FLAG(param, GM_PARAM_ASCM_INT);
 
-  if (gm_hw == GM_ASCM) {
+  if (gm_hw == GM_ASCM || gm_ascm_int) {
     gm_long_limits = &GM_ASCM_LONG_LIMITS;
   } else if (gm_hw == GM_CAM) {
     gm_long_limits = &GM_CAM_LONG_LIMITS;
@@ -259,7 +260,6 @@ static safety_config gm_init(uint16_t param) {
     SET_RX_CHECKS(gm_ev_rx_checks, ret);
   }
 
-  const bool gm_ascm_int = GET_FLAG(param, GM_PARAM_ASCM_INT);
   if (gm_ascm_int) {
     SET_RX_CHECKS(gm_ascm_int_rx_checks, ret);
   }
