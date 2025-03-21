@@ -64,6 +64,7 @@ class GMSafetyFlags(IntFlag):
   HW_CAM = 1
   HW_CAM_LONG = 2
   EV = 4
+  ASCM_INT = 8
 
 
 @dataclass
@@ -112,7 +113,7 @@ class CAR(Platforms):
     [GMCarDocs("Holden Astra 2017")],
     GMCarSpecs(mass=1363, wheelbase=2.662, steerRatio=15.7, centerToFrontRatio=0.4),
   )
-  CHEVROLET_VOLT = GMASCMPlatformConfig(
+  CHEVROLET_VOLT = GMPlatformConfig(
     [GMCarDocs("Chevrolet Volt 2017-18", min_enable_speed=0, video_link="https://youtu.be/QeMCN_4TFfQ")],
     GMCarSpecs(mass=1607, wheelbase=2.69, steerRatio=17.7, centerToFrontRatio=0.45, tireStiffnessFactor=0.469),
   )
@@ -271,6 +272,9 @@ ALT_ACCS = {CAR.GMC_YUKON}
 
 # We're integrated at the Safety Data Gateway Module on these cars
 SDGM_CAR = {CAR.CADILLAC_XT4, CAR.CHEVROLET_VOLT_2019, CAR.CHEVROLET_TRAVERSE}
+
+# New harness for Volt intercepts at ASCM, hybrid between SDGM and CAM
+ASCM_INT = {CAR.CHEVROLET_VOLT}
 
 STEER_THRESHOLD = 1.0
 
