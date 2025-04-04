@@ -94,7 +94,7 @@ class CarState(CarStateBase):
 
       # can't check ECMAcceleratorPos on Volt since its not transmitted when ASCM is active
       ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"]
-      ret.brakePressed = ret.brake >= 8
+      ret.brakePressed = ret.brake >= 10
 
     # Regen braking is braking
     if self.CP.transmissionType == TransmissionType.direct:
@@ -219,4 +219,3 @@ class CarState(CarStateBase):
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], cam_messages, 2),
       Bus.loopback: CANParser(DBC[CP.carFingerprint][Bus.pt], loopback_messages, 128),
     }
-
