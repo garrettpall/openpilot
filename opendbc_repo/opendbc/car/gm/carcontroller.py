@@ -5,6 +5,7 @@ from opendbc.car.gm import gmcan
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons
 from opendbc.car.interfaces import CarControllerBase
+from openpilot.selfdrive.car.cruise import VCruiseCarrot
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
 NetworkLocation = structs.CarParams.NetworkLocation
@@ -35,6 +36,10 @@ class CarController(CarControllerBase):
     self.packer_pt = CANPacker(DBC[self.CP.carFingerprint][Bus.pt])
     self.packer_obj = CANPacker(DBC[self.CP.carFingerprint][Bus.radar])
     self.packer_ch = CANPacker(DBC[self.CP.carFingerprint][Bus.chassis])
+
+    # GM: AutoResume
+    self.activateCruise_after_brake = False
+    self.v_cruise_carrot = VCruiseCarrot(self.CP)
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -81,6 +86,27 @@ class CarController(CarControllerBase):
       can_sends.append(gmcan.create_steering_control(self.packer_pt, CanBus.POWERTRAIN, apply_torque, idx, CC.latActive))
 
     if self.CP.openpilotLongitudinalControl:
+
+      if self.CP.carFingerprint in (CAR.CHEVROLET_VOLT, CAR.CADILLAC_CT6_2019):
+        button_counter = (CS.buttons_counter + 1) % 4
+        # Auto Cruise
+        if CS.out.activateCruise and not CS.out.cruiseState.enabled:
+          self.activateCruise_after_brake = False # 오토크루즈가 되기 위해 브레이크 신호는 OFF여야 함.
+          if (self.frame - self.last_button_frame) * DT_CTRL > 0.04: # 25Hz(40ms 버튼주기)
+            self.last_button_frame = self.frame
+            can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, button_counter, CruiseButtons.DECEL_SET))
+
+        # Auto Resume
+        elif actuators.longControlState == LongCtrlState.starting:
+          if CS.out.cruiseState.enabled and not self.activateCruise_after_brake: #브레이크신호 한번만 보내기 위한 조건.
+            idx = (self.frame // 4) % 4
+            brake_force = -0.5  #롱컨캔슬을 위한 브레이크값(0.0 이하)
+            apply_brake = self.brake_input(brake_force)
+            # 브레이크신호 전송(롱컨 꺼짐)
+            can_sends.append(gmcan.create_brake_command(self.packer_ch, CanBus.CHASSIS, apply_brake, idx))
+            Params().put_bool_nonblocking("ActivateCruiseAfterBrake", True) # cruise.py에 브레이크 ON신호 전달
+            self.activateCruise_after_brake = True # 브레이크신호는 한번만 보내고 초기화
+        
       # Gas/regen, brakes, and UI commands - all at 25Hz
       if self.frame % 4 == 0:
         stopping = actuators.longControlState == LongCtrlState.stopping
@@ -107,8 +133,21 @@ class CarController(CarControllerBase):
           at_full_stop = at_full_stop and stopping
           friction_brake_bus = CanBus.POWERTRAIN
 
+        if self.CP.autoResumeSng:
+          resume = actuators.longControlState != LongCtrlState.starting or CC.cruiseControl.resume
+          at_full_stop = at_full_stop and not resume
+
+        if CC.cruiseControl.resume and CS.pcm_acc_status == AccState.STANDSTILL:
+          acc_engaged = False
+        else:
+          acc_engaged = CC.enabled
+
+        if actuators.longControlState in [LongCtrlState.stopping, LongCtrlState.starting]:
+          if (self.frame - self.last_button_frame) * DT_CTRL > 0.04:
+            self.last_button_frame = self.frame
+            can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, (CS.buttons_counter + 1) % 4, CruiseButtons.RES_ACCEL))
         # GasRegenCmdActive needs to be 1 to avoid cruise faults. It describes the ACC state, not actuation
-        can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled, at_full_stop))
+        can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, acc_engaged, at_full_stop))
         can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake,
                                                              idx, CC.enabled, near_stop, at_full_stop, self.CP))
 
@@ -160,3 +199,14 @@ class CarController(CarControllerBase):
 
     self.frame += 1
     return new_actuators, can_sends
+
+  # Auto Resume
+  def brake_input(self, brake_force):
+    MAX_BRAKE = 400
+    ZERO_GAS = 2048
+
+    if brake_force > 0.0:
+      raise ValueError("brake_force는 0.0이하라야 됨.")
+
+    scaled_brake = max(0, min(MAX_BRAKE, int(brake_force * -100)))  # -를 +로 변환
+    return ZERO_GAS - scaled_brake
