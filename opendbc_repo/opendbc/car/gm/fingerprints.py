@@ -1,7 +1,6 @@
 # 2025.04.04 South Korea CT6-2019/2020 Reborn 3.6L Support K56 New SDGM
 # ruff: noqa: E501
 from opendbc.car.gm.values import CAR
-
 # Trailblazer also matches as a SILVERADO, TODO: split with fw versions
 # FIXME: There are Equinox users with different message lengths, specifically 304 and 320
 
