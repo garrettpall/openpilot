@@ -40,6 +40,7 @@ class CarControllerParams:
       self.MAX_GAS = 1346.0
       self.MAX_ACC_REGEN = -540.0
       self.INACTIVE_REGEN = -500.0
+      self.BRAKE_SWITCH_MAX = self.MAX_ACC_REGEN if CP.carFingerprint in EV_CAR else 0
       # Camera ACC vehicles have no regen while enabled.
       # Camera transitions to MAX_ACC_REGEN from zero gas and uses friction brakes instantly
       max_regen_acceleration = 0.
@@ -50,13 +51,13 @@ class CarControllerParams:
       self.INACTIVE_REGEN = -650.0
       # ICE has much less engine braking force compared to regen in EVs,
       # lower threshold removes some braking deadzone
-      max_regen_acceleration = -1. if CP.carFingerprint in EV_CAR else -0.1
+      self.BRAKE_SWITCH_MAX = self.MAX_ACC_REGEN if CP.carFingerprint in EV_CAR else 0
 
-    self.GAS_LOOKUP_BP = [max_regen_acceleration, 0., self.ACCEL_MAX]
-    self.GAS_LOOKUP_V = [self.MAX_ACC_REGEN, 0., self.MAX_GAS]
-
-    self.BRAKE_LOOKUP_BP = [self.ACCEL_MIN, max_regen_acceleration]
+    self.BRAKE_LOOKUP_BP = [self.ACCEL_MIN, 0.]
     self.BRAKE_LOOKUP_V = [self.MAX_BRAKE, 0.]
+
+    self.BRAKE_SWITCH_LOOKUP_BP = [0.5, 10]
+    self.BRAKE_SWITCH_LOOKUP_V = [0, self.BRAKE_SWITCH_MAX]
 
 
 class GMSafetyFlags(IntFlag):
